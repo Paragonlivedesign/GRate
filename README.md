@@ -88,6 +88,27 @@ Settings live in `%APPDATA%\GRate\settings.json`, so they survive updates and re
 
 **BPM is exactly half or double** — that's the nature of beat detection with some material. Use the ½ / ×2 buttons.
 
+## Building from source
+
+The full application source lives in [`source/`](source/). To run it directly:
+
+```powershell
+cd source
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m grate.main
+```
+
+To produce the exe and installer yourself:
+
+```powershell
+.\scripts\build_exe.ps1        # dist\GRate.exe (PyInstaller)
+.\scripts\build_installer.ps1  # installer\output\GRate-Setup.exe (Inno Setup 6)
+```
+
+The installer script will fetch Inno Setup via winget if it isn't installed.
+
 ## Versions
 
 | Branch | What it is |
