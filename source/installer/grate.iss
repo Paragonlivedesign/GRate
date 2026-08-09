@@ -20,6 +20,7 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
+SetupIconFile=..\grate\ui\assets\grate.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]

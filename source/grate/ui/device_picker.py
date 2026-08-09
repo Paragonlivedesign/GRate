@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QTreeWidget,
@@ -26,6 +28,19 @@ FAMILY_TITLES = {
 }
 
 
+def _default_dialog_size(min_w: int = 900, min_h: int = 640, frac: float = 0.72) -> tuple[int, int]:
+    screen = QGuiApplication.primaryScreen()
+    if screen is None:
+        return min_w, min_h
+    geo = screen.availableGeometry()
+    w = max(min_w, int(geo.width() * frac))
+    h = max(min_h, int(geo.height() * frac))
+    # Cap so it doesn't cover the whole desktop awkwardly
+    w = min(w, int(geo.width() * 0.92))
+    h = min(h, int(geo.height() * 0.90))
+    return w, h
+
+
 class DevicePickerDialog(QDialog):
     def __init__(
         self,
@@ -37,7 +52,11 @@ class DevicePickerDialog(QDialog):
     ):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(520, 480)
+        self.setSizeGripEnabled(True)
+        self.setMinimumSize(720, 520)
+        w, h = _default_dialog_size(900, 640, 0.75)
+        self.resize(w, h)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._devices = devices
         self._selected: InputDeviceInfo | None = None
         self._build(current_name)
@@ -45,6 +64,7 @@ class DevicePickerDialog(QDialog):
     def _build(self, current_name: str) -> None:
         root = QVBoxLayout(self)
         root.setSpacing(8)
+        root.setContentsMargins(12, 12, 12, 12)
 
         self.search = QLineEdit()
         self.search.setPlaceholderText("Search devices (e.g. dvs, voicemeeter, scarlett)…")
@@ -61,16 +81,29 @@ class DevicePickerDialog(QDialog):
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Device", "Host API", "Ch", "SR"])
-        self.tree.setColumnWidth(0, 280)
-        self.tree.setColumnWidth(1, 110)
-        self.tree.setColumnWidth(2, 40)
         self.tree.setAlternatingRowColors(True)
+        self.tree.setUniformRowHeights(True)
+        self.tree.setRootIsDecorated(True)
+        self.tree.setAnimated(True)
+        header = self.tree.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tree.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tree.setTextElideMode(Qt.ElideNone)
         self.tree.itemDoubleClicked.connect(self._accept_item)
         self.tree.itemSelectionChanged.connect(self._on_select)
         root.addWidget(self.tree, stretch=1)
 
-        self.hint = QLabel("Tip: pick WASAPI devices when possible — cleaner for DVS / Voicemeeter.")
+        self.hint = QLabel(
+            "Tip: pick WASAPI devices when possible — cleaner for DVS / Voicemeeter. "
+            "Resize this window from any edge or the corner grip."
+        )
         self.hint.setStyleSheet("color:#6d7588; font-size:11px;")
+        self.hint.setWordWrap(True)
         root.addWidget(self.hint)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -115,6 +148,7 @@ class DevicePickerDialog(QDialog):
                     ]
                 )
                 child.setData(0, Qt.UserRole, d)
+                child.setToolTip(0, d.label)
                 parent.addChild(child)
                 if self._current_name and (
                     d.name == self._current_name or self._current_name.lower() in d.name.lower()
@@ -125,6 +159,7 @@ class DevicePickerDialog(QDialog):
         if select_item is not None:
             self.tree.setCurrentItem(select_item)
             self._selected = select_item.data(0, Qt.UserRole)
+            self.tree.scrollToItem(select_item)
 
         if self.tree.topLevelItemCount() == 0:
             empty = QTreeWidgetItem(["No devices match", "", "", ""])

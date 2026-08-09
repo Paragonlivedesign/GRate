@@ -73,6 +73,7 @@ class BeatEngine:
         self._bpm = 0.0
         self._confidence = 0.0
         self._manual_override_until = 0.0
+        self._manual_sticky = False
         self._tap_times: deque[float] = deque(maxlen=8)
         self._has_signal = False
         self._recent_bpms: deque[float] = deque(maxlen=LOCK_WINDOW)
@@ -129,7 +130,13 @@ class BeatEngine:
         return self._has_signal
 
     @property
+    def manual_sticky(self) -> bool:
+        return self._manual_sticky
+
+    @property
     def locked(self) -> bool:
+        if self._manual_sticky and self._bpm > 0:
+            return True
         if not self._has_signal or self._bpm <= 0:
             return False
         if self._last_beat_time <= 0:
@@ -148,10 +155,11 @@ class BeatEngine:
 
         events: list[BeatEvent] = []
 
-        # Silence freeze (optional hard zero)
+        # Silence freeze (optional hard zero) — never while sticky tap override is on
         silence_age = now - self._last_audio_time
         if (
-            self.silence_freeze_seconds > 0
+            not self._manual_sticky
+            and self.silence_freeze_seconds > 0
             and silence_age >= self.silence_freeze_seconds
             and now >= self._manual_override_until
         ):
@@ -165,7 +173,7 @@ class BeatEngine:
 
         rms = float(np.sqrt(np.mean(np.square(samples))) + 1e-12)
         db = 20.0 * np.log10(max(rms, 1e-9))
-        self._has_signal = db >= SIGNAL_GATE_DB
+        self._has_signal = db >= SIGNAL_GATE_DB or self._manual_sticky
 
         if not self._has_signal:
             # Hold last BPM; do not feed noise into aubio
@@ -195,7 +203,7 @@ class BeatEngine:
             except Exception:
                 conf = 1.0 if is_beat else self._confidence
 
-            if now < self._manual_override_until:
+            if self._manual_sticky or now < self._manual_override_until:
                 events.append(
                     BeatEvent(
                         bpm=self._bpm,
@@ -206,7 +214,7 @@ class BeatEngine:
                         locked=True,
                     )
                 )
-                if is_beat:
+                if is_beat and not self._manual_sticky:
                     self._last_beat_time = now
                     self._recent_bpms.append(self._bpm)
                 continue
@@ -272,9 +280,16 @@ class BeatEngine:
         self._pending = audio[offset:]
         return events
 
+    @property
+    def tap_count(self) -> int:
+        return len(self._tap_times)
+
     def tap(self) -> float:
-        """Manual tap-tempo. Returns current estimated BPM."""
+        """Record a tap. Returns provisional BPM once 2+ taps exist (does not sticky-apply)."""
         now = time.monotonic()
+        # A long pause starts a fresh tap series (stale taps would skew the median)
+        if self._tap_times and now - self._tap_times[-1] > 2.5:
+            self._tap_times.clear()
         self._tap_times.append(now)
         if len(self._tap_times) >= 2:
             intervals = [
@@ -285,7 +300,9 @@ class BeatEngine:
             if median_interval > 0:
                 self._bpm = clamp_octave(60.0 / median_interval, self.bpm_min, self.bpm_max)
                 self._confidence = 1.0
-                self._manual_override_until = now + 4.0
+                # Short preview hold only — Apply makes it sticky
+                if not self._manual_sticky:
+                    self._manual_override_until = now + 2.0
                 self._recent_bpms.clear()
                 for _ in range(LOCK_WINDOW):
                     self._recent_bpms.append(self._bpm)
@@ -293,11 +310,32 @@ class BeatEngine:
                 self._has_signal = True
         return self._bpm
 
+    def apply_manual(self) -> float:
+        """Lock current BPM as sticky override (overwrites live waveform tempo)."""
+        if self._bpm <= 0:
+            return 0.0
+        self._manual_sticky = True
+        self._manual_override_until = time.monotonic() + 1e9
+        self._confidence = 1.0
+        self._recent_bpms.clear()
+        for _ in range(LOCK_WINDOW):
+            self._recent_bpms.append(self._bpm)
+        return self._bpm
+
+    def clear_manual(self) -> None:
+        """Return tempo tracking to the live waveform analyzer."""
+        self._manual_sticky = False
+        self._manual_override_until = 0.0
+        self._tap_times.clear()
+
     def multiply(self, factor: float) -> float:
         if self._bpm <= 0:
             return self._bpm
         self._bpm = clamp_octave(self._bpm * factor, self.bpm_min, self.bpm_max)
-        self._manual_override_until = time.monotonic() + 4.0
+        if self._manual_sticky:
+            self._manual_override_until = time.monotonic() + 1e9
+        else:
+            self._manual_override_until = time.monotonic() + 4.0
         self._confidence = 1.0
         self._recent_bpms.clear()
         for _ in range(LOCK_WINDOW):
@@ -313,6 +351,8 @@ class BeatEngine:
         self._confidence = 0.0
         self._tap_times.clear()
         self._has_signal = False
+        self._manual_sticky = False
+        self._manual_override_until = 0.0
         self._recent_bpms.clear()
         self._outlier_candidate = 0.0
         self._outlier_count = 0

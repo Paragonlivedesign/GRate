@@ -101,13 +101,21 @@ class OscOutput:
                 self._last_error = ""
             return sent_any
 
-    def send_bpm(self, lane_id: str, speed_master: str, bpm: float, force: bool = False) -> bool:
+    def send_bpm(
+        self,
+        lane_id: str,
+        speed_master: str,
+        bpm: float,
+        force: bool = False,
+        min_delta: float | None = None,
+    ) -> bool:
         if bpm <= 0 or not speed_master:
             return False
+        threshold = self._settings.bpm_delta if min_delta is None else float(min_delta)
         with self._lock:
             last = self._last_bpm.get(lane_id)
             delta = abs(bpm - last) if last is not None else 999.0
-            if not force and last is not None and delta < self._settings.bpm_delta:
+            if not force and last is not None and delta < threshold:
                 return False
             self._last_bpm[lane_id] = bpm
         value = round(float(bpm), 2)

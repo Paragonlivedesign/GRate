@@ -168,12 +168,29 @@ class _LaneSink:
         with self._lock:
             self.channel_mode = mode
 
+    def set_waveform_seconds(self, seconds: float) -> None:
+        seconds = float(max(1.0, min(16.0, seconds)))
+        with self._lock:
+            if abs(seconds - self.waveform_seconds) < 0.05:
+                return
+            self.waveform_seconds = seconds
+            maxlen = max(1, int(self._sample_rate * self.waveform_seconds))
+            old = self._waveform
+            self._waveform = np.zeros(maxlen, dtype=np.float32)
+            if old.size:
+                n = min(old.size, maxlen)
+                self._waveform[-n:] = old[-n:]
+
     def set_sample_rate(self, rate: float) -> None:
         self._sample_rate = rate
         maxlen = max(1, int(rate * self.waveform_seconds))
         with self._lock:
             if self._waveform.size != maxlen:
+                old = self._waveform
                 self._waveform = np.zeros(maxlen, dtype=np.float32)
+                if old.size:
+                    n = min(old.size, maxlen)
+                    self._waveform[-n:] = old[-n:]
 
     def push(self, block: np.ndarray) -> None:
         with self._lock:
@@ -285,11 +302,17 @@ class AudioCaptureManager:
         device_index: int | None,
         channel_mode: ChannelMode = "sum",
         gain_db: float = 0.0,
+        waveform_seconds: float = 3.0,
     ) -> InputDeviceInfo | None:
         device = resolve_device(device_name, device_index)
         if device is None:
             return None
-        sink = _LaneSink(lane_id, channel_mode, gain_db=gain_db)
+        sink = _LaneSink(
+            lane_id,
+            channel_mode,
+            gain_db=gain_db,
+            waveform_seconds=max(1.0, min(16.0, float(waveform_seconds))),
+        )
         with self._lock:
             self.unbind_lane_unlocked(lane_id)
             stream = self._streams.get(device.index)
@@ -314,6 +337,13 @@ class AudioCaptureManager:
         if binding is None:
             return
         binding[1].set_channel_mode(mode)
+
+    def set_lane_waveform_seconds(self, lane_id: str, seconds: float) -> None:
+        with self._lock:
+            binding = self._lane_bindings.get(lane_id)
+        if binding is None:
+            return
+        binding[1].set_waveform_seconds(seconds)
 
     def is_bound(self, lane_id: str) -> bool:
         with self._lock:

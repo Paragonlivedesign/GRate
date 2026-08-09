@@ -78,6 +78,14 @@ Heads up: MA3's MIDI Index is the note number **plus one**.
 
 Settings live in `%APPDATA%\GRate\settings.json`, so they survive updates and reinstalls.
 
+## Known issues (1.0.0)
+
+Still working through these — none of them block the main BPM → OSC path:
+
+- **Monitor audio popping** — headphone/monitor output can click or pop, especially when starting/stopping lanes or changing devices. Detection itself is unaffected.
+- **Graphic EQ** — the EQ UI is in place but still needs polish (response curve, smoothing, and usability).
+- **MIDI controller** — MIDI note-per-beat and MIDI clock are implemented, but haven't been fully validated on a live console yet. Prefer OSC for show use until this is signed off.
+
 ## Troubleshooting
 
 **No DVS devices in the list** — DVS is in ASIO mode, or hasn't been started. Switch to WDM and restart it.
@@ -87,6 +95,8 @@ Settings live in `%APPDATA%\GRate\settings.json`, so they survive updates and re
 **MA3 isn't reacting** — check OSC Input is enabled on the console, the port and prefix match, and both machines are on the same subnet. Echo Input in the System Monitor tells you immediately whether the messages are arriving.
 
 **BPM is exactly half or double** — that's the nature of beat detection with some material. Use the ½ / ×2 buttons.
+
+**Monitor pops / clicks** — known in 1.0.0. Mute the monitor output if it's distracting; OSC/MIDI triggers keep running.
 
 ## Building from source
 

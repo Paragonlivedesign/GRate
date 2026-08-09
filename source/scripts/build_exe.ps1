@@ -18,6 +18,8 @@ New-Item -ItemType Directory -Force -Path dist, build | Out-Null
     --name GRate `
     --onefile `
     --paths . `
+    --icon grate\ui\assets\grate.ico `
+    --add-data "grate\ui\assets;grate\ui\assets" `
     --hidden-import aubio `
     --hidden-import sounddevice `
     --hidden-import mido.backends.rtmidi `
