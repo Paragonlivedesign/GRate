@@ -6,16 +6,12 @@ GRate listens to Dante Virtual Soundcard inputs, tracks the tempo of whatever is
 
 Built for touring — dark UI, big readouts, runs on the same Windows machine as your DVS.
 
-## Download
-
-Grab the latest build from the [Releases page](https://github.com/Paragonlivedesign/GRate/releases/latest):
-
-- **GRate-Setup.exe** — installer (recommended)
-- **GRate.exe** — portable, single file, no install needed
-
-Stable builds are published from `main`. Beta builds come from the `beta` branch and are marked as pre-releases — expect rough edges there.
+**Download the latest release:**  
+[GRate-Setup.exe](https://github.com/Paragonlivedesign/GRate/releases/latest/download/GRate-Setup.exe) (installer) · [GRate.exe](https://github.com/Paragonlivedesign/GRate/releases/latest/download/GRate.exe) (portable) · [All releases](https://github.com/Paragonlivedesign/GRate/releases)
 
 Windows may warn about an unsigned executable on first run. Click "More info" → "Run anyway".
+
+Stable builds ship from `main`. Beta builds come from the `beta` branch and are marked as pre-releases.
 
 ## What it does
 
