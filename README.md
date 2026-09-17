@@ -15,11 +15,12 @@ Stable builds ship from `main`. Beta builds come from the `beta` branch and are 
 
 ## What it does
 
-- **Multiple lanes** — assign different Dante receive channels to different triggers. Run drums on one lane driving a Speed Master, click on another firing a sequence.
-- **Live metering** — scrolling waveform, input level, and a large BPM readout per lane.
+- **Tracks with channels** — each track holds multiple Dante inputs. Kick can drive the Speed Master while snare/vocal channels fire their own OSC triggers.
+- **Per-channel EQ** — Kick / Snare / Vocal presets or custom Hz, plus mute, solo, and monitor-listen to dial a range in by ear.
+- **Live metering** — scrolling waveform with per-channel envelopes, input level, and a large BPM readout.
 - **OSC out** — sends `Master 3.x At BPM ...` to MA3, optional `Go+ Sequence ...` on every beat.
 - **MIDI out** — note per beat and MIDI clock, for consoles or gear that prefer it.
-- **Tempo tools** — beat divider, tap tempo, half/double, bar resync.
+- **Tempo tools** — beat divider, tap tempo with Apply, half/double, bar resync.
 
 ## Requirements
 
@@ -68,18 +69,17 @@ Heads up: MA3's MIDI Index is the note number **plus one**.
 ## Using it
 
 1. Start GRate
-2. On a lane, pick your DVS receive device and hit **Start**
+2. On a channel, pick your DVS receive device and hit **Start**
 3. Watch the waveform and BPM settle in — a few seconds of steady material is enough
-4. Point the lane's OSC target at your console IP and enable the trigger
+4. Point the track's OSC target at your console IP and enable the trigger
 
 Settings live in `%APPDATA%\GRate\settings.json`, so they survive updates and reinstalls.
 
-## Known issues (1.0.0)
+## Known issues (1.0.1)
 
 Still working through these — none of them block the main BPM → OSC path:
 
-- **Monitor audio popping** — headphone/monitor output can click or pop, especially when starting/stopping lanes or changing devices. Detection itself is unaffected.
-- **Graphic EQ** — the EQ UI is in place but still needs polish (response curve, smoothing, and usability).
+- **Monitor audio** — 1.0.1 reduces pops (larger output blocks, 30 fps UI, resample-phase fix). Start/stop or device changes can still click.
 - **MIDI controller** — MIDI note-per-beat and MIDI clock are implemented, but haven't been fully validated on a live console yet. Prefer OSC for show use until this is signed off.
 
 ## Troubleshooting
@@ -92,7 +92,7 @@ Still working through these — none of them block the main BPM → OSC path:
 
 **BPM is exactly half or double** — that's the nature of beat detection with some material. Use the ½ / ×2 buttons.
 
-**Monitor pops / clicks** — known in 1.0.0. Mute the monitor output if it's distracting; OSC/MIDI triggers keep running.
+**Monitor pops / clicks** — improved in 1.0.1. Mute the monitor output if it still distracts; OSC/MIDI triggers keep running.
 
 ## Building from source
 

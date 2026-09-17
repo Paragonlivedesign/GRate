@@ -294,7 +294,10 @@ class MainWindow(QMainWindow):
                 pass
 
         self.timer = QTimer(self)
-        self.timer.setInterval(16)  # ~60 fps for smooth waveform scrolling
+        # ~30 fps: higher rates make the GUI thread hog the GIL and starve the
+        # audio callbacks (audible as monitor pops). Scroll smoothness comes
+        # from the stable rendering path, not raw frame rate.
+        self.timer.setInterval(33)
         self.timer.timeout.connect(self._tick)
         self.timer.start()
         self._update_status()

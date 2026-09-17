@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.1 — 2026-09-17
+
+- Fix monitor crackle from resample phase wrapping and short output callbacks
+- Drop UI refresh to 30 fps so the GUI thread stops starving audio
+- Pack app icon and UI assets into the PyInstaller exe
+- Document tracks-with-channels (this was already in 1.0.0 source)
+
+### Known issues
+
+- Monitor can still click on start/stop or device changes
+- MIDI controller path not fully tested on a live console — prefer OSC for now
+
 ## 1.0.0 — 2026-08-09
 
 First public release.

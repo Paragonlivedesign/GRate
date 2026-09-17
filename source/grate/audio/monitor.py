@@ -99,7 +99,9 @@ class MonitorOutput:
                         device=device.index,
                         channels=2,
                         samplerate=self._out_rate,
-                        blocksize=512,
+                        # 1024 = ~21 ms deadline per callback: headroom against
+                        # GIL stalls from UI rendering (512 was only ~10 ms)
+                        blocksize=1024,
                         dtype="float32",
                         latency="high",
                         callback=self._callback,
@@ -138,6 +140,8 @@ class MonitorOutput:
         buf = np.concatenate([self._tail, x])
         step = (self._src_rate / self._out_rate) * self._drift
         span = buf.size - 1
+        # Output positions t = phase + k*step must satisfy t < span so that
+        # interpolation between buf[i] and buf[i+1] stays in bounds.
         n = int((span - self._phase) / step)
         if n <= 0:
             self._tail = buf
@@ -146,8 +150,14 @@ class MonitorOutput:
         i = t.astype(np.int64)
         frac = (t - i).astype(np.float32)
         out = buf[i] * (1.0 - frac) + buf[i + 1] * frac
-        self._phase = self._phase + n * step - span
-        self._tail = buf[-1:]
+        # Advance: keep the fractional phase in [0, 1) and retain the samples
+        # still needed for the next interpolation. (Re-referencing to the last
+        # sample would drive phase negative -> extrapolated samples at every
+        # push boundary = audible crackle.)
+        next_t = self._phase + n * step
+        consumed = min(int(next_t), span)
+        self._phase = next_t - consumed
+        self._tail = buf[consumed:]
         return out.astype(np.float32, copy=False)
 
     def push(self, mono: np.ndarray) -> None:

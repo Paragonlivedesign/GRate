@@ -9,7 +9,7 @@ a = Analysis(
     ['grate/main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[],
+    datas=[('grate/ui/assets', 'grate/ui/assets')],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -39,4 +39,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['grate/ui/assets/grate.ico'],
 )
